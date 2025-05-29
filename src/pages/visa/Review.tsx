@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVisaApplication } from '@/contexts/VisaApplicationContext';
@@ -6,6 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Edit, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import emailjs from '@emailjs/browser';
+
+// Replace these with your EmailJS credentials
+const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
 
 export default function Review() {
   const { formData, setCurrentStep, clearDraft } = useVisaApplication();
@@ -18,24 +23,56 @@ export default function Review() {
     navigate(`/visa/step${step}`);
   };
 
+  const formatFormDataForEmail = (data: any) => {
+    const formatValue = (value: any): string => {
+      if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+      if (typeof value === 'object' && value !== null) {
+        if (Array.isArray(value)) {
+          return value.map((item, index) => `\n  ${index + 1}. ${formatValue(item)}`).join('');
+        }
+        return Object.entries(value)
+          .map(([key, val]) => `\n  ${key}: ${formatValue(val)}`)
+          .join('');
+      }
+      return String(value);
+    };
+
+    return Object.entries(data)
+      .map(([key, value]) => `${key}:\n${formatValue(value)}`)
+      .join('\n\n');
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Format the data for email
+      const formattedData = formatFormDataForEmail(formData);
+
+      // Send email using EmailJS
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          form_data: formattedData,
+          applicant_name: `${formData.personalInfo.firstName} ${formData.personalInfo.surname}`,
+          applicant_email: formData.personalInfo.currentAddress.email,
+        },
+        EMAILJS_PUBLIC_KEY
+      );
       
       // Clear the draft after successful submission
       clearDraft();
       
       toast({
         title: "Application Submitted Successfully",
-        description: "Your visa application has been submitted and is being processed.",
+        description: "Your visa application has been submitted and sent via email. You will receive a confirmation shortly.",
       });
       
-      // Navigate to a success page or back to home
+      // Navigate to home
       navigate('/');
     } catch (error) {
+      console.error('Submission error:', error);
       toast({
         title: "Submission Failed",
         description: "There was an error submitting your application. Please try again.",
