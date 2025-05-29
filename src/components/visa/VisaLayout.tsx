@@ -6,7 +6,7 @@ import { useVisaApplication } from '@/contexts/VisaApplicationContext';
 
 export function VisaLayout() {
   const { currentStep } = useVisaApplication();
-  const totalSteps = 13; // 11 steps + declaration + review
+  const totalSteps = 12; // 11 steps + declaration + review
 
   return (
     <div className="min-h-screen bg-gray-50">
